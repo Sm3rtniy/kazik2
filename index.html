@@ -4,13 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>FrankGrader</title>
-    <!-- Подключаем SDK Telegram -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body {
-            background-color: #0f0f0f;
+            background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
             color: white;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             margin: 0;
             padding: 20px;
             display: flex;
@@ -24,20 +23,22 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 40px;
+            margin-bottom: 30px;
         }
         .balance {
             background: #222;
             padding: 8px 16px;
             border-radius: 20px;
             font-weight: bold;
-            border: 1px solid #333;
+            border: 1px solid #ffd700;
+            color: #ffd700;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
         }
         .wheel-container {
             position: relative;
-            width: 280px;
-            height: 280px;
-            margin-bottom: 40px;
+            width: 260px;
+            height: 260px;
+            margin-bottom: 30px;
         }
         .wheel {
             width: 100%;
@@ -48,11 +49,11 @@
             justify-content: center;
             align-items: center;
             border: 8px solid #1a1a1a;
-            box-shadow: 0 0 30px rgba(255, 215, 0, 0.2);
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.15);
         }
         .wheel-inner {
-            width: 80%;
-            height: 80%;
+            width: 82%;
+            height: 82%;
             background: #111;
             border-radius: 50%;
             display: flex;
@@ -60,97 +61,89 @@
             justify-content: center;
             align-items: center;
             z-index: 2;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
         }
-        .chance-text {
-            font-size: 48px;
-            font-weight: bold;
-            margin: 0;
-        }
-        .chance-label {
-            color: #888;
-            margin: 0;
-            font-size: 14px;
-        }
-        /* Стрелка */
+        .chance-text { font-size: 52px; font-weight: bold; margin: 0; color: #fff; }
+        .chance-label { color: #888; margin: 0; font-size: 13px; letter-spacing: 1px; }
         .arrow {
             position: absolute;
             top: 50%;
             left: 50%;
             width: 6px;
-            height: 120px;
+            height: 115px;
             background: #ffd700;
             transform-origin: bottom center;
             transform: translate(-50%, -100%) rotate(0deg);
-            transition: transform 3s cubic-bezier(0.25, 0.1, 0.25, 1);
+            transition: transform 3.5s cubic-bezier(0.2, 0.8, 0.2, 1);
             z-index: 3;
             border-radius: 3px;
+            box-shadow: 0 0 10px #ffd700;
         }
         .controls {
             width: 100%;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 20px;
             margin-top: auto;
         }
         input[type=range] {
             width: 100%;
             accent-color: #ffd700;
+            height: 8px;
+            background: #333;
+            border-radius: 5px;
         }
         .btn {
             background: #ffd700;
             color: black;
             border: none;
-            padding: 20px;
+            padding: 18px;
             border-radius: 15px;
             font-size: 18px;
-            font-weight: bold;
+            font-weight: 800;
             cursor: pointer;
-            transition: opacity 0.2s;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+            text-transform: uppercase;
         }
-        .btn:disabled {
-            opacity: 0.5;
-            background: #555;
-        }
+        .btn:active { transform: scale(0.98); }
+        .btn:disabled { opacity: 0.5; background: #555; box-shadow: none; }
         .result {
             text-align: center;
-            margin-top: 20px;
+            margin-top: 15px;
             font-size: 20px;
             font-weight: bold;
             min-height: 30px;
         }
-        .win { color: #4caf50; }
-        .lose { color: #f44336; }
+        .win { color: #4caf50; text-shadow: 0 0 10px rgba(76, 175, 80, 0.5); }
+        .lose { color: #f44336; text-shadow: 0 0 10px rgba(244, 67, 54, 0.5); }
     </style>
 </head>
 <body>
-    <!-- Шапка -->
     <div class="header">
-        <h2 style="margin:0;">FrankGrader</h2>
-        <div class="balance" id="balance">💎 0 TON</div>
+        <h2 style="margin:0; font-weight:900; letter-spacing:-1px;">Frank<span style="color:#ffd700">Grader</span></h2>
+        <div class="balance" id="balance">💎 ... TON</div>
     </div>
 
-    <!-- Рулетка -->
     <div class="wheel-container">
         <div class="wheel">
             <div class="wheel-inner">
                 <h1 class="chance-text" id="chanceDisplay">50%</h1>
-                <p class="chance-label">Шанс апгрейда</p>
+                <p class="chance-label">ШАНС АПГРЕЙДА</p>
             </div>
         </div>
         <div class="arrow" id="arrow"></div>
     </div>
 
-    <!-- Управление -->
     <div class="controls">
         <input type="range" id="chanceSlider" min="10" max="90" value="50" step="1">
-        <button class="btn" id="upgradeBtn">АПГРЕЙД (Ставка: 10 TON)</button>
+        <button class="btn" id="upgradeBtn">АПГРЕЙД (10 TON)</button>
         <div class="result" id="result"></div>
     </div>
 
     <script>
-        // Инициализация Telegram WebApp
         const tg = window.Telegram.WebApp;
-        tg.expand(); // Развернуть на весь экран
+        tg.expand();
         tg.ready();
 
         const slider = document.getElementById('chanceSlider');
@@ -161,14 +154,27 @@
         const balanceDiv = document.getElementById('balance');
 
         let isSpinning = false;
-        let currentBalance = 100; // Демо-баланс для теста
+        let currentBalance = 0;
+        const betAmount = 10;
+        const userId = tg.initDataUnsafe?.user?.id || 1;
 
-        // Обновление UI при движении ползунка
+        // Загружаем баланс при старте
+        async function loadBalance() {
+            try {
+                const response = await fetch(`/api/balance?user_id=${userId}`);
+                const data = await response.json();
+                currentBalance = data.balance;
+                balanceDiv.textContent = `💎 ${currentBalance.toFixed(2)} TON`;
+            } catch (e) {
+                balanceDiv.textContent = `💎 0 TON`;
+            }
+        }
+        loadBalance();
+
         slider.addEventListener('input', (e) => {
             chanceDisplay.textContent = `${e.target.value}%`;
         });
 
-        // Логика нажатия на кнопку
         upgradeBtn.addEventListener('click', async () => {
             if (isSpinning) return;
             isSpinning = true;
@@ -176,48 +182,42 @@
             resultDiv.textContent = '';
             
             const chance = parseInt(slider.value);
-            const bet = 10;
 
-            // Анимация вращения (5 полных оборотов + случайный угол)
             const randomRotate = Math.floor(Math.random() * 360);
-            const totalRotation = 360 * 5 + randomRotate;
+            const totalRotation = 360 * 6 + randomRotate;
             arrow.style.transform = `translate(-50%, -100%) rotate(${totalRotation}deg)`;
 
-            // Отправляем запрос на наш Python-сервер
             try {
                 const response = await fetch('/api/upgrade', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        chance: chance, 
-                        bet: bet,
-                        user_id: tg.initDataUnsafe?.user?.id || 1 
-                    })
+                    body: JSON.stringify({ chance: chance, bet: betAmount, user_id: userId })
                 });
                 const data = await response.json();
 
-                // Ждем 3 секунды, пока крутится анимация
                 setTimeout(() => {
                     isSpinning = false;
                     upgradeBtn.disabled = false;
                     
-                    if (data.win) {
-                        currentBalance += (bet * (100 / chance));
-                        resultDiv.className = 'result win';
-                        resultDiv.textContent = `🎉 ПОБЕДА! +${(bet * (100 / chance)).toFixed(2)} TON`;
-                    } else {
-                        currentBalance -= bet;
+                    if (data.error) {
                         resultDiv.className = 'result lose';
-                        resultDiv.textContent = `😢 ПРОИГРЫШ. -${bet} TON`;
+                        resultDiv.textContent = `❌ ${data.error}`;
+                    } else if (data.win) {
+                        resultDiv.className = 'result win';
+                        resultDiv.textContent = `🎉 ПОБЕДА! +${data.win_amount.toFixed(2)} TON`;
+                    } else {
+                        resultDiv.className = 'result lose';
+                        resultDiv.textContent = `😢 ПРОИГРЫШ. -${betAmount} TON`;
                     }
+                    
+                    currentBalance = data.new_balance;
                     balanceDiv.textContent = `💎 ${currentBalance.toFixed(2)} TON`;
                     
-                    // Сбрасываем стрелку в исходное положение без анимации
                     arrow.style.transition = 'none';
                     arrow.style.transform = `translate(-50%, -100%) rotate(0deg)`;
-                    setTimeout(() => arrow.style.transition = 'transform 3s cubic-bezier(0.25, 0.1, 0.25, 1)', 50);
+                    setTimeout(() => arrow.style.transition = 'transform 3.5s cubic-bezier(0.2, 0.8, 0.2, 1)', 50);
                     
-                }, 3000);
+                }, 3500);
 
             } catch (error) {
                 console.error(error);
