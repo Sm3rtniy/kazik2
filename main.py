@@ -13,7 +13,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 BOT_TOKEN = "8756762893:AAHAaPb8Fo50pj-gju38kK45tvOJiPtD314" # ОБЯЗАТЕЛЬНО ЗАМЕНИ!
 # Ссылка на твой сервер (пока оставь так, если тестируешь локально)
 # Для работы в Telegram нужен HTTPS (об этом ниже)
-WEBAPP_URL = "https://user-186.nport.link" 
+WEBAPP_URL = "https://kazik2-1.onrender.com" 
 
 # --- 1. ИНИЦИАЛИЗАЦИЯ FASTAPI (ВЕБ-СЕРВЕР) ---
 app = FastAPI()
