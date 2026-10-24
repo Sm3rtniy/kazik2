@@ -1,7 +1,8 @@
 import asyncio
 import random
 import os
-from fastapi import FastAPI, Request
+import aiosqlite
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
@@ -10,15 +11,12 @@ from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 
 # --- НАСТРОЙКИ ---
-BOT_TOKEN = "8756762893:AAHAaPb8Fo50pj-gju38kK45tvOJiPtD314" # ОБЯЗАТЕЛЬНО ЗАМЕНИ!
-# Ссылка на твой сервер (пока оставь так, если тестируешь локально)
-# Для работы в Telegram нужен HTTPS (об этом ниже)
+BOT_TOKEN = "8756762893:AAHAApb8Fo50pj-gju38kk45tvOJiPtD314" 
+# Твоя постоянная ссылка от Render
 WEBAPP_URL = "https://kazik2-1.onrender.com" 
 
-# --- 1. ИНИЦИАЛИЗАЦИЯ FASTAPI (ВЕБ-СЕРВЕР) ---
+# --- FASTAPI ---
 app = FastAPI()
-
-# Разрешаем запросы с любых доменов (для тестов)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -26,68 +24,118 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Отдаем HTML файл при заходе на корень сайта
+DB_NAME = "game.db"
+
+async def init_db():
+    async with aiosqlite.connect(DB_NAME) as db:
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                user_id INTEGER PRIMARY KEY,
+                balance REAL DEFAULT 100.0
+            )
+        """)
+        await db.commit()
+
+@app.on_event("startup")
+async def startup():
+    await init_db()
+
 @app.get("/", response_class=HTMLResponse)
 async def get_index():
     with open("index.html", "r", encoding="utf-8") as f:
         return f.read()
 
-# API endpoint для обработки апгрейда
+# Эндпоинт для получения баланса при загрузке страницы
+@app.get("/api/balance")
+async def get_balance(user_id: int):
+    async with aiosqlite.connect(DB_NAME) as db:
+        async with db.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)) as cursor:
+            row = await cursor.fetchone()
+            if not row:
+                await db.execute("INSERT INTO users (user_id, balance) VALUES (?, ?)", (user_id, 100.0))
+                await db.commit()
+                return {"balance": 100.0}
+            return {"balance": row[0]}
+
 @app.post("/api/upgrade")
 async def process_upgrade(request: Request):
     data = await request.json()
     chance = data.get("chance", 50)
     bet = data.get("bet", 10)
-    
-    # Логика рандома (на сервере, чтобы нельзя было подделать)
-    roll = random.uniform(0, 100)
-    win = roll <= chance
-    
-    return {
-        "win": win,
-        "roll": round(roll, 2),
-        "message": "Победа" if win else "Проигрыш"
-    }
+    user_id = data.get("user_id")
 
-# --- 2. ИНИЦИАЛИЗАЦИЯ БОТА (AIogram) ---
+    if not user_id:
+        raise HTTPException(status_code=400, detail="No user_id")
+
+    async with aiosqlite.connect(DB_NAME) as db:
+        # Получаем баланс
+        async with db.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)) as cursor:
+            row = await cursor.fetchone()
+            if not row:
+                await db.execute("INSERT INTO users (user_id, balance) VALUES (?, ?)", (user_id, 100.0))
+                await db.commit()
+                current_balance = 100.0
+            else:
+                current_balance = row[0]
+
+        # Проверка баланса
+        if current_balance < bet:
+            return {"win": False, "error": "Недостаточно средств", "new_balance": current_balance}
+
+        # Списываем ставку
+        current_balance -= bet
+
+        # Логика рандома
+        roll = random.uniform(0, 100)
+        win = roll <= chance
+
+        if win:
+            win_amount = bet * (100 / chance)
+            current_balance += win_amount
+        else:
+            win_amount = 0
+
+        # Сохраняем новый баланс
+        await db.execute("UPDATE users SET balance = ? WHERE user_id = ?", (current_balance, user_id))
+        await db.commit()
+
+        return {
+            "win": win,
+            "roll": round(roll, 2),
+            "win_amount": round(win_amount, 2),
+            "new_balance": round(current_balance, 2)
+        }
+
+# --- TELEGRAM BOT ---
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
-    # Создаем кнопку, которая открывает Mini App
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
             text="🚀 Открыть FrankGrader", 
             web_app=WebAppInfo(url=WEBAPP_URL)
         )]
     ])
-    
     await message.answer(
-        "Добро пожаловать в FrankGrader!\nНажми кнопку ниже, чтобы открыть приложение.",
+        "Добро пожаловать в FrankGrader! 🎁\nНажми кнопку ниже, чтобы открыть приложение.",
         reply_markup=keyboard
     )
 
-# --- 3. ЗАПУСК ВСЕГО ВМЕСТЕ ---
 async def start_bot():
     print("Бот запущен...")
     await dp.start_polling(bot)
 
 async def start_server():
-    print("Веб-сервер запущен на http://127.0.0.1:8000")
-    config = uvicorn.Config(app, host="0.0.0.0", port=8000, log_level="info")
+    port = int(os.environ.get("PORT", 8000))
+    print(f"Сервер запущен на порту {port}")
+    config = uvicorn.Config(app, host="0.0.0.0", port=port, log_level="info")
     server = uvicorn.Server(config)
     await server.serve()
 
 async def main():
-    # Запускаем бота и сервер параллельно
-    await asyncio.gather(
-        start_bot(),
-        start_server()
-    )
+    await asyncio.gather(start_bot(), start_server())
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        print("Выключение...")
+    asyncio.run(main())
