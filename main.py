@@ -11,7 +11,7 @@ from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 
 # --- НАСТРОЙКИ ---
-BOT_TOKEN = "8756762893:AAHAApb8Fo50pj-gju38kk45tvOJiPtD314" 
+BOT_TOKEN = "8756762893:AAHAaPb8Fo50pj-gju38kK45tvOJiPtD314" 
 # Твоя постоянная ссылка от Render
 WEBAPP_URL = "https://kazik2-1.onrender.com" 
 
