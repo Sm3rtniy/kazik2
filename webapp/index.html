@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<title>Casino</title>
+<style>
+  body { font-family: sans-serif; padding: 16px; background: #1a1a1a; color: #fff; }
+  input, button, select { font-size: 16px; padding: 8px; margin: 4px 0; width: 100%; box-sizing: border-box; }
+  button { background: #2481cc; color: #fff; border: none; border-radius: 6px; }
+  #result { margin-top: 16px; font-size: 18px; }
+</style>
+</head>
+<body>
+  <h2>🎲 Dice</h2>
+  <p>Баланс: <b id="balance">—</b></p>
+  <input type="number" id="bet" value="10" min="1">
+  <button onclick="play()">Играть</button>
+  <div id="result"></div>
+
+<script>
+const tg = window.Telegram.WebApp;
+tg.ready();
+tg.expand();
+
+async function play() {
+  const bet = parseInt(document.getElementById('bet').value);
+  const res = await fetch('/api/play', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ init_data: tg.initData, bet })
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    document.getElementById('result').innerText = '❌ ' + (err.detail || 'Ошибка');
+    return;
+  }
+  const data = await res.json();
+  document.getElementById('balance').innerText = data.new_balance;
+  document.getElementById('result').innerText =
+    `Выпало: ${data.roll}. ` + (data.win ? `✅ +${data.payout}` : '❌ Проигрыш');
+}
+</script>
+</body>
+</html>
